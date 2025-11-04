@@ -12,8 +12,8 @@ use std::process;
 
 const DEFAULT_LED_PATH: &str = "/sys/class/leds/tpacpi::power/brightness";
 const DEFAULT_NVME_STAT_PATH: &str = "/sys/block/nvme0n1/stat";
-const DEFAULT_POLL_INTERVAL_MS: u64 = 8;
-const DEFAULT_BLINK_ON_MS: u64 = 12;
+const DEFAULT_POLL_INTERVAL_MS: u64 = 10;
+const DEFAULT_BLINK_ON_MS: u64 = 10;
 const DEFAULT_CONFIG_PATH: &str = "/etc/nvme-led-daemon.conf";
 
 #[derive(Copy, Clone, Debug)]

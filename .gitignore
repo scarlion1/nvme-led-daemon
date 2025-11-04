@@ -1,9 +1,61 @@
+# Rust/Cargo
 target/
+**/*.rs.bk
 Cargo.lock
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Core dumps
+core
+*.core
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+*.bak
+*.old
+
+# Editor swap/backup files
 *.swp
 *.swo
 *~
-**/*.rs.bk
+
+# OS/editor files
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
+*.code-workspace
+
+# Shell history and caches
+*.cache
+.cache/
+.nv/
+.python_history
+
+# Generated media (ignore by default; explicitly add the demo you want)
+*.webm
+*.webp
+*.mp4
+*.gif
+.thumbnails/
+# Keep the main demo video tracked
+!nvme-led-demo.webm
+
+# Test artifacts and recordings
+/test-output/
+/recordings/
+
+# Node/npm if you experiment with docs tooling
+node_modules/
+
+# ffmpeg temp
+concat_list.txt
+/tmp/
