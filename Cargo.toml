@@ -1,7 +1,7 @@
 [package]
 name = "nvme-led-daemon"
 version = "0.1.0"
-edition = "2025"
+edition = "2024"
 
 [dependencies]
 libc = "0.2"
