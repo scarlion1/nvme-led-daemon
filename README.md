@@ -16,10 +16,9 @@ A lightweight Linux daemon that mirrors NVMe disk activity to a chassis LED (e.g
 
 NVMe LED activity patterns (with my router in the background, guarded by Meowth):
 
-<video src="demos/nvme-led-demo.webm" height="480" autoplay loop muted playsinline></video>
+<video src="https://github.com/user-attachments/assets/a2819cf8-e794-4f95-8845-6bff5e87a067" height="480" autoplay loop muted playsinline></video>
 
-If your browser doesn’t autoplay inline, click to open:
-- [nvme-led-demo.webm](demos/nvme-led-demo.webm)
+If your browser doesn’t autoplay inline, click to open: [nvme-led-demo.webm](https://github.com/user-attachments/assets/a2819cf8-e794-4f95-8845-6bff5e87a067)
 
 Notes:
 - Recorded with interval/read/write = 8/16/32 ms for frame alignment.
