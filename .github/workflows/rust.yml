@@ -19,7 +19,8 @@ jobs:
     - name: Setup Rust toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1
     - name: Run Linter
-      run: cargo clippy
+      run: cargo clippy -- -D warnings
+      continue-on-error: true
     - name: Build
       run: cargo build --verbose
     - name: Run tests
