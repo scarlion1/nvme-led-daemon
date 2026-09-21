@@ -21,7 +21,7 @@ const DEFAULT_LED_PATH: &str = "/sys/class/leds/tpacpi::power/brightness";
 // Default path to NVMe disk statistics file
 // This file contains space-separated counters for I/O operations
 // Format: reads completed, reads merged, sectors read, time reading (ms),
-//		   writes completed, writes merged, sectors written, time writing (ms), ...
+//                 writes completed, writes merged, sectors written, time writing (ms), ...
 const DEFAULT_NVME_STAT_PATH: &str = "/sys/block/nvme0n1/stat";
 
 // How often to poll the NVMe stat file for changes (in milliseconds)
@@ -60,17 +60,17 @@ enum NvmeMode {
 /// Used to determine which blink duration to apply and for filtering
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Dir { 
-	Read,	// Data being read from disk
-	Write	// Data being written to disk
+	Read,   // Data being read from disk
+	Write   // Data being written to disk
 }
 
 /// Which types of operations should trigger the LED
 /// Allows filtering to only show reads, only writes, or both
 #[derive(Copy, Clone, Debug)]
 enum FieldsSel {
-	Reads,	 // Only read operations trigger LED
+	Reads,   // Only read operations trigger LED
 	Writes,  // Only write operations trigger LED
-	Both	 // Both read and write operations trigger LED
+	Both     // Both read and write operations trigger LED
 }
 
 // ============================================================================
@@ -119,10 +119,10 @@ impl Epoll {
 	/// # Arguments
 	/// * `fd` - The file descriptor to monitor (in our case, timerfd)
 	/// * `data_u64` - User data to identify which fd triggered (our "tag")
-	///				   This value is returned in events, letting us distinguish
-	///				   between the poll timer and off timer
+	///                                This value is returned in events, letting us distinguish
+	///                                between the poll timer and off timer
 	/// * `events` - Bitmask of events to monitor (e.g., EPOLLIN for readable)
-	///				 Timerfds become readable when they expire
+	///                              Timerfds become readable when they expire
 	fn add_fd(&self, fd: RawFd, data_u64: u64, events: u32) -> io::Result<()> {
 		// Create epoll_event structure with our tag in the u64 field
 		let mut ev = libc::epoll_event { events, u64: data_u64 };
@@ -148,10 +148,10 @@ impl Epoll {
 		// This is efficient: the process sleeps and kernel wakes it when timer fires
 		let n = unsafe { 
 			libc::epoll_wait(
-				self.fd,					// epoll instance
-				events.as_mut_ptr(),		// output buffer
-				events.len() as i32,		// buffer size
-				-1							// timeout (-1 = infinite)
+				self.fd,                                        // epoll instance
+				events.as_mut_ptr(),            // output buffer
+				events.len() as i32,            // buffer size
+				-1                                                      // timeout (-1 = infinite)
 			) 
 		};
 		
@@ -182,7 +182,7 @@ impl Drop for Epoll {
 /// We use two timerfds:
 /// 1. A periodic timer that fires every poll_ms to check NVMe stats
 /// 2. A one-shot timer that fires once to turn the LED off after activity
-struct Tfd(RawFd);	// Newtype wrapper around raw file descriptor
+struct Tfd(RawFd);      // Newtype wrapper around raw file descriptor
 
 impl Tfd {
 	/// Create a periodic timer that fires every interval_ms milliseconds
@@ -196,8 +196,8 @@ impl Tfd {
 		// TFD_CLOEXEC: close on exec (good practice)
 		let fd = unsafe { 
 			libc::timerfd_create(
-				libc::CLOCK_MONOTONIC,						// clock type
-				libc::TFD_NONBLOCK | libc::TFD_CLOEXEC		// flags
+				libc::CLOCK_MONOTONIC,                                          // clock type
+				libc::TFD_NONBLOCK | libc::TFD_CLOEXEC          // flags
 			) 
 		};
 		if fd < 0 { 
@@ -211,8 +211,8 @@ impl Tfd {
 		let spec = libc::itimerspec {
 			// Repeat interval: convert ms to seconds + nanoseconds
 			it_interval: libc::timespec { 
-				tv_sec: (interval_ms / 1000) as i64,		   // whole seconds
-				tv_nsec: ns_from_ms(interval_ms % 1000)		   // remaining milliseconds as nanoseconds
+				tv_sec: (interval_ms / 1000) as i64,               // whole seconds
+				tv_nsec: ns_from_ms(interval_ms % 1000)            // remaining milliseconds as nanoseconds
 			},
 			// Initial expiration: 1 nanosecond (fire almost immediately)
 			it_value: libc::timespec { 
@@ -271,10 +271,10 @@ impl Tfd {
 	fn arm_after_ms(&self, delay_ms: u64) -> io::Result<()> {
 		// Create timer spec with no repeat (it_interval=0) and specified delay
 		let spec = libc::itimerspec {
-			it_interval: libc::timespec { tv_sec: 0, tv_nsec: 0 },	// No repeat (one-shot)
+			it_interval: libc::timespec { tv_sec: 0, tv_nsec: 0 },  // No repeat (one-shot)
 			it_value: libc::timespec { 
-				tv_sec: (delay_ms / 1000) as i64,			   // whole seconds
-				tv_nsec: ns_from_ms(delay_ms % 1000)		   // remaining milliseconds
+				tv_sec: (delay_ms / 1000) as i64,                          // whole seconds
+				tv_nsec: ns_from_ms(delay_ms % 1000)               // remaining milliseconds
 			},
 		};
 		
@@ -297,9 +297,9 @@ impl Tfd {
 		// We ignore errors because there's nothing useful to do if this fails
 		unsafe { 
 			libc::read(
-				self.0,							// timerfd file descriptor
-				buf8.as_mut_ptr() as *mut _,	// buffer to receive count
-				8								// always read 8 bytes (u64)
+				self.0,                                                 // timerfd file descriptor
+				buf8.as_mut_ptr() as *mut _,    // buffer to receive count
+				8                                                               // always read 8 bytes (u64)
 			); 
 		}; 
 	}
@@ -324,9 +324,9 @@ impl Drop for Tfd {
 /// current state to avoid redundant writes (which cause unnecessary syscalls
 /// and potential flickering).
 struct Led {
-	f: File,				  // Open file handle to LED brightness sysfs file
-	current_logical: u8,	  // Cache of current state (0=off, 1=on, 255=unknown)
-	active_high: bool,		  // LED polarity: true=1 is on, false=0 is on
+	f: File,                                  // Open file handle to LED brightness sysfs file
+	current_logical: u8,      // Cache of current state (0=off, 1=on, 255=unknown)
+	active_high: bool,                // LED polarity: true=1 is on, false=0 is on
 }
 
 impl Led {
@@ -423,11 +423,62 @@ impl Led {
 /// 
 /// We monitor either fields 0&4 (I/O counts) or 2&6 (sector counts) and
 /// detect activity by comparing to previous values.
+// ============================================================================
+// STAT PARSING: Extracted for testability
+// ============================================================================
+
+/// Parse NVMe stat fields based on mode
+/// Returns (read_value, write_value) tuple
+/// Extracted to allow unit testing without file I/O
+fn parse_stat_fields(s: &str, mode: NvmeMode) -> Option<(u128, u128)> {
+	// Parse whitespace-separated fields
+	let mut idx = 0usize;      // Current field index
+	let mut r = None;          // Read counter value
+	let mut w = None;          // Write counter value
+
+	// Iterate through whitespace-separated tokens
+	for token in s.split_whitespace() {
+		// Try to parse as u64 (all stat fields are numeric)
+		if let Ok(v) = token.parse::<u64>() {
+			// Extract the fields we care about based on mode
+			match mode {
+				NvmeMode::Sectors => {
+					// Field 2: sectors read (512-byte sectors)
+					if idx == 2 { r = Some(v as u128); }
+					// Field 6: sectors written
+					if idx == 6 {
+						w = Some(v as u128);
+						// Early exit once we have both values
+						if r.is_some() { break; }
+					}
+				}
+				NvmeMode::Io => {
+					// Field 0: read I/Os completed successfully
+					if idx == 0 { r = Some(v as u128); }
+					// Field 4: write I/Os completed
+					if idx == 4 {
+						w = Some(v as u128);
+						// Early exit once we have both values
+						if r.is_some() { break; }
+					}
+				}
+			}
+			idx += 1;
+		}
+	}
+	
+	// Both values must be present
+	match (r, w) {
+		(Some(rv), Some(wv)) => Some((rv, wv)),
+		_ => None
+	}
+}
+
 struct Nvme {
-	path: String,		  // Path to stat file (e.g., /sys/block/nvme0n1/stat)
-	last_reads: u128,	  // Previous read counter value (u128 to avoid overflow)
-	last_writes: u128,	  // Previous write counter value
-	mode: NvmeMode,		  // Which fields to monitor (sectors vs I/O count)
+	path: String,             // Path to stat file (e.g., /sys/block/nvme0n1/stat)
+	last_reads: u128,         // Previous read counter value (u128 to avoid overflow)
+	last_writes: u128,        // Previous write counter value
+	mode: NvmeMode,           // Which fields to monitor (sectors vs I/O count)
 }
 
 impl Nvme {
@@ -439,7 +490,7 @@ impl Nvme {
 	fn new(path: &str, mode: NvmeMode) -> Self {
 		Self { 
 			path: path.to_string(), 
-			last_reads: 0,		// Start with zero (first poll will show activity)
+			last_reads: 0,          // Start with zero (first poll will show activity)
 			last_writes: 0, 
 			mode 
 		}
@@ -470,49 +521,10 @@ impl Nvme {
 		// Convert bytes to string for parsing
 		let s = std::str::from_utf8(&scratch[..n]).unwrap_or("");
 		
-		// Parse whitespace-separated fields
-		let mut idx = 0usize;	   // Current field index
-		let mut r = None;		   // Read counter value
-		let mut w = None;		   // Write counter value
-		
-		// Iterate through whitespace-separated tokens
-		for token in s.split_whitespace() {
-			// Try to parse as u64 (all stat fields are numeric)
-			if let Ok(v) = token.parse::<u64>() {
-				// Extract the fields we care about based on mode
-				match self.mode {
-					NvmeMode::Sectors => {
-						// Field 2: sectors read (512-byte sectors)
-						if idx == 2 { r = Some(v as u128); }
-						// Field 6: sectors written
-						if idx == 6 { 
-							w = Some(v as u128); 
-							// Early exit once we have both values
-							if r.is_some() { break; } 
-						}
-					}
-					NvmeMode::Io => {
-						// Field 0: read I/Os completed successfully
-						if idx == 0 { r = Some(v as u128); }
-						// Field 4: write I/Os completed
-						if idx == 4 { 
-							w = Some(v as u128); 
-							// Early exit once we have both values
-							if r.is_some() { break; } 
-						}
-					}
-				}
-				idx += 1;
-			} else {
-				// Non-numeric token (shouldn't happen, but handle gracefully)
-				idx += 1;
-			}
-		}
-		
-		// Check if we successfully parsed both values
-		// If not, return None (file format unexpected)
-		let (Some(rn), Some(wn)) = (r, w) else { 
-			return Ok(None); 
+		// Use extracted parsing function for testability
+		let (rn, wn) = match parse_stat_fields(s, self.mode) {
+			Some(values) => values,
+			None => return Ok(None),  // Parse failed or incomplete data
 		};
 		
 		// Compare to previous values to detect changes
@@ -528,13 +540,13 @@ impl Nvme {
 		// Determine activity direction based on which counter(s) changed
 		// Priority: if both changed, report as Write (arbitrary choice)
 		if rchg && !wchg { 
-			Ok(Some(Dir::Read))		 // Only reads increased
+			Ok(Some(Dir::Read))              // Only reads increased
 		} else if wchg && !rchg { 
-			Ok(Some(Dir::Write))	 // Only writes increased
+			Ok(Some(Dir::Write))     // Only writes increased
 		} else if rchg && wchg { 
-			Ok(Some(Dir::Write))	 // Both increased, report as write
+			Ok(Some(Dir::Write))     // Both increased, report as write
 		} else { 
-			Ok(None)				 // No change detected
+			Ok(None)                                 // No change detected
 		}
 	}
 }
@@ -552,16 +564,16 @@ impl Nvme {
 /// 4. Command-line arguments
 #[derive(Clone)]
 struct Config {
-	led_path: String,				   // Path to LED sysfs file
-	nvme_path: String,				   // Path to NVMe stat file
-	poll_ms: u64,					   // Polling interval in milliseconds
-	blink_ms: u64,					   // Default LED on duration in milliseconds
-	read_blink_ms: Option<u64>,		   // Override blink duration for reads (if Some)
-	write_blink_ms: Option<u64>,	   // Override blink duration for writes (if Some)
-	active_high: bool,				   // LED polarity (true = writing "1" turns on)
-	quiet: bool,					   // Suppress startup message
-	nvme_mode: NvmeMode,			   // Which stat fields to monitor
-	on_fields: FieldsSel,			   // Which operations trigger LED
+	led_path: String,                                  // Path to LED sysfs file
+	nvme_path: String,                                 // Path to NVMe stat file
+	poll_ms: u64,                                      // Polling interval in milliseconds
+	blink_ms: u64,                                     // Default LED on duration in milliseconds
+	read_blink_ms: Option<u64>,                // Override blink duration for reads (if Some)
+	write_blink_ms: Option<u64>,       // Override blink duration for writes (if Some)
+	active_high: bool,                                 // LED polarity (true = writing "1" turns on)
+	quiet: bool,                                       // Suppress startup message
+	nvme_mode: NvmeMode,                       // Which stat fields to monitor
+	on_fields: FieldsSel,                      // Which operations trigger LED
 }
 
 /// Load configuration from a key=value file
@@ -619,7 +631,7 @@ fn get_bool(map: &HashMap<String, String>, key: &str, default: bool) -> bool {
 fn get_u64(map: &HashMap<String, String>, key: &str, default: u64) -> u64 {
 	map.get(key)
 		.and_then(|v| v.parse().ok())  // Try to parse as u64
-		.unwrap_or(default)				// Use default if parse fails
+		.unwrap_or(default)                             // Use default if parse fails
 }
 
 /// Get string from config map with default fallback
@@ -656,10 +668,10 @@ Options:
   --help
 
 Defaults:
-  led_path	  {lp}
+  led_path        {lp}
   nvme_path    {np}
-  interval_ms	 {pi}
-  blink_ms	  {bm}
+  interval_ms    {pi}
+  blink_ms        {bm}
   nvme_mode    sectors
   on_fields    both
 ",
@@ -672,30 +684,13 @@ Defaults:
 	process::exit(0)
 }
 
-/// Parse configuration from default config file and command-line arguments
-/// 
-/// Loading order:
-/// 1. Try to load /etc/nvme-led-daemon.conf (silently ignore if missing)
-/// 2. Apply defaults from config file or use hard-coded defaults
-/// 3. Process CLI arguments, which override config file settings
-/// 4. If --config specified, load that file and re-apply its settings
-///    (but CLI args still take precedence)
-/// 
-/// This allows flexible configuration: you can use just CLI args, just a
-/// config file, or a mix of both with CLI args overriding file settings.
-fn parse_args() -> Config {
-	// Try loading default config file first (silently ignore if missing)
-	// unwrap_or_else returns empty HashMap if file doesn't exist
-	let config_map = load_config(DEFAULT_CONFIG_PATH)
-		.unwrap_or_else(|_| HashMap::new());
-
-	// Initialize config with defaults from file or constants
-	// get_* functions handle missing keys by returning defaults
-	let mut cfg = Config {
-		led_path: get_str(&config_map, "led_path", DEFAULT_LED_PATH).to_string(),
-		nvme_path: get_str(&config_map, "nvme_path", DEFAULT_NVME_STAT_PATH).to_string(),
-		poll_ms: get_u64(&config_map, "interval_ms", DEFAULT_POLL_INTERVAL_MS),
-		blink_ms: get_u64(&config_map, "blink_ms", DEFAULT_BLINK_ON_MS),
+/// Build a Config from a config-file HashMap, using built-in defaults for missing keys.
+fn config_from_map(config_map: &HashMap<String, String>) -> Config {
+	Config {
+		led_path: get_str(config_map, "led_path", DEFAULT_LED_PATH).to_string(),
+		nvme_path: get_str(config_map, "nvme_path", DEFAULT_NVME_STAT_PATH).to_string(),
+		poll_ms: get_u64(config_map, "interval_ms", DEFAULT_POLL_INTERVAL_MS),
+		blink_ms: get_u64(config_map, "blink_ms", DEFAULT_BLINK_ON_MS),
 		
 		// Optional per-direction blink durations
 		read_blink_ms: config_map.get("read_blink_ms")
@@ -703,51 +698,72 @@ fn parse_args() -> Config {
 		write_blink_ms: config_map.get("write_blink_ms")
 			.and_then(|v| v.parse().ok()),
 		
-		active_high: get_bool(&config_map, "active_high", false),
-		quiet: get_bool(&config_map, "quiet", false),
+		active_high: get_bool(config_map, "active_high", false),
+		quiet: get_bool(config_map, "quiet", false),
 		
 		// Parse nvme_mode from string
-		nvme_mode: match get_str(&config_map, "nvme_mode", "sectors") {
+		nvme_mode: match get_str(config_map, "nvme_mode", "sectors") {
 			"io" => NvmeMode::Io,
 			_ => NvmeMode::Sectors,  // Default to sectors for any other value
 		},
 		
 		// Parse on_fields from string
-		on_fields: match get_str(&config_map, "on_fields", "both") {
+		on_fields: match get_str(config_map, "on_fields", "both") {
 			"reads" => FieldsSel::Reads,
 			"writes" => FieldsSel::Writes,
 			_ => FieldsSel::Both,  // Default to both for any other value
 		},
-	};
+	}
+}
 
-	// Process command-line arguments, overriding config file values
-	// skip(1) skips the program name (argv[0])
-	let mut it = env::args().skip(1).peekable();
-	
+/// Validate timing configuration values.
+/// Returns Err if any timing value is zero (which would break the daemon).
+fn validate_timing(cfg: &Config) -> Result<(), String> {
+	if cfg.poll_ms == 0 {
+		return Err("Error: interval_ms must be > 0".to_string());
+	}
+	if cfg.blink_ms == 0 {
+		return Err("Error: blink_ms must be > 0".to_string());
+	}
+	if cfg.read_blink_ms == Some(0) {
+		return Err("Error: read_blink_ms must be > 0".to_string());
+	}
+	if cfg.write_blink_ms == Some(0) {
+		return Err("Error: write_blink_ms must be > 0".to_string());
+	}
+	Ok(())
+}
+
+/// Apply command-line arguments on top of an existing Config.
+/// CLI flags always override config-file values.
+fn apply_cli_args(cfg: &mut Config, args: &[String]) {
+	let mut it = args.iter().peekable();
+
 	while let Some(a) = it.next() {
 		match a.as_str() {
-			"--help" | "-h" => help(),	// Print help and exit
+			"--help" | "-h" => {}  // Handled by caller
+			"--config" => { let _ = it.next(); }  // Path already used
 			
-			// Boolean flags (no argument)
+			// Boolean flags
 			"--quiet" => cfg.quiet = true,
 			"--active-high" => cfg.active_high = true,
 			
-			// Path arguments (require next argument)
+			// Path arguments
 			"--led" => { 
 				cfg.led_path = it.next().unwrap_or_else(|| { 
 					eprintln!("--led requires PATH"); 
 					process::exit(2) 
-				}); 
+				}).clone(); 
 			}
 			
 			"--nvme" => { 
 				cfg.nvme_path = it.next().unwrap_or_else(|| { 
 					eprintln!("--nvme requires PATH"); 
 					process::exit(2) 
-				}); 
+				}).clone(); 
 			}
 			
-			// Numeric arguments with validation
+			// Numeric arguments
 			"--interval-ms" => {
 				cfg.poll_ms = it.next()
 					.and_then(|v| v.parse().ok())
@@ -755,8 +771,6 @@ fn parse_args() -> Config {
 						eprintln!("invalid --interval-ms"); 
 						process::exit(2) 
 					});
-				// Enforce minimum of 1ms (0 would cause busy loop)
-				if cfg.poll_ms == 0 { cfg.poll_ms = 1; }
 			}
 			
 			"--blink-ms" => {
@@ -766,8 +780,6 @@ fn parse_args() -> Config {
 						eprintln!("invalid --blink-ms"); 
 						process::exit(2) 
 					});
-				// Enforce minimum of 1ms
-				if cfg.blink_ms == 0 { cfg.blink_ms = 1; }
 			}
 			
 			"--read-blink-ms" => {
@@ -777,8 +789,7 @@ fn parse_args() -> Config {
 						eprintln!("invalid --read-blink-ms"); 
 						process::exit(2) 
 					});
-				// Store as Some with minimum of 1ms
-				cfg.read_blink_ms = Some(v.max(1));
+				cfg.read_blink_ms = Some(v);
 			}
 			
 			"--write-blink-ms" => {
@@ -788,11 +799,10 @@ fn parse_args() -> Config {
 						eprintln!("invalid --write-blink-ms"); 
 						process::exit(2) 
 					});
-				// Store as Some with minimum of 1ms
-				cfg.write_blink_ms = Some(v.max(1));
+				cfg.write_blink_ms = Some(v);
 			}
 			
-			// Enum arguments with validation
+			// Enum arguments
 			"--nvme-mode" => {
 				let v = it.next().unwrap_or_else(|| { 
 					eprintln!("--nvme-mode requires io|sectors"); 
@@ -824,71 +834,66 @@ fn parse_args() -> Config {
 				}
 			}
 			
-			// Load custom config file
-			// This re-applies config file settings, but CLI args already
-			// processed still take precedence (we don't re-process them)
-			"--config" => {
-				let path = it.next().unwrap_or_else(|| { 
-					eprintln!("--config requires PATH"); 
-					process::exit(2) 
-				});
-				
-				// Load the custom config file (error if it doesn't exist)
-				let new_map = load_config(&path).unwrap_or_else(|e| {
-					eprintln!("Failed to load config {}: {}", path, e);
-					process::exit(2)
-				});
-				
-				// Re-apply config from custom path
-				// Use current values as defaults so CLI args aren't overridden
-				cfg.led_path = get_str(&new_map, "led_path", &cfg.led_path).to_string();
-				cfg.nvme_path = get_str(&new_map, "nvme_path", &cfg.nvme_path).to_string();
-				cfg.poll_ms = get_u64(&new_map, "interval_ms", cfg.poll_ms);
-				cfg.blink_ms = get_u64(&new_map, "blink_ms", cfg.blink_ms);
-				
-				// Optional values: only override if present in new config
-				if let Some(v) = new_map.get("read_blink_ms").and_then(|v| v.parse().ok()) { 
-					cfg.read_blink_ms = Some(v); 
-				}
-				if let Some(v) = new_map.get("write_blink_ms").and_then(|v| v.parse().ok()) { 
-					cfg.write_blink_ms = Some(v); 
-				}
-				
-				cfg.active_high = get_bool(&new_map, "active_high", cfg.active_high);
-				cfg.quiet = get_bool(&new_map, "quiet", cfg.quiet);
-				
-				// Parse enum values with current value as default
-				cfg.nvme_mode = match get_str(&new_map, "nvme_mode", 
-					match cfg.nvme_mode { 
-						NvmeMode::Io => "io", 
-						NvmeMode::Sectors => "sectors" 
-					}) {
-					"io" => NvmeMode::Io,
-					_ => NvmeMode::Sectors,
-				};
-				
-				cfg.on_fields = match get_str(&new_map, "on_fields", 
-					match cfg.on_fields { 
-						FieldsSel::Reads => "reads", 
-						FieldsSel::Writes => "writes", 
-						FieldsSel::Both => "both" 
-					}) {
-					"reads" => FieldsSel::Reads,
-					"writes" => FieldsSel::Writes,
-					_ => FieldsSel::Both,
-				};
-			}
-			
 			// Unknown argument
 			other => { 
 				eprintln!("Unknown arg: {}", other); 
-				help();  // Print help and exit
+				help();
 			}
 		}
+	}
+}
+
+/// Parse configuration from default config file and command-line arguments.
+/// Precedence: defaults < config file < CLI args
+fn parse_args() -> Config {
+	// Collect CLI args first to check for --help and --config
+	let args: Vec<String> = env::args().skip(1).collect();
+	
+	// Handle --help before any other processing
+	for arg in &args {
+		if arg == "--help" || arg == "-h" {
+			help();
+		}
+	}
+	
+	// Determine which config file to load
+	let mut config_path = DEFAULT_CONFIG_PATH.to_string();
+	let mut it = args.iter();
+	while let Some(arg) = it.next() {
+		if arg == "--config" {
+			config_path = it.next().unwrap_or_else(|| {
+				eprintln!("--config requires PATH");
+				process::exit(2)
+			}).clone();
+			break;
+		}
+	}
+	
+	// Load config file (silently ignore if default doesn't exist)
+	let config_map = if config_path == DEFAULT_CONFIG_PATH {
+		load_config(&config_path).unwrap_or_else(|_| HashMap::new())
+	} else {
+		load_config(&config_path).unwrap_or_else(|e| {
+			eprintln!("Failed to load config {}: {}", config_path, e);
+			process::exit(2)
+		})
+	};
+	
+	// Build config from file with defaults
+	let mut cfg = config_from_map(&config_map);
+	
+	// Apply CLI arguments (always override file values)
+	apply_cli_args(&mut cfg, &args);
+	
+	// Validate timing settings
+	if let Err(e) = validate_timing(&cfg) {
+		eprintln!("{}", e);
+		process::exit(1);
 	}
 	
 	cfg
 }
+
 
 // ============================================================================
 // MAIN: Event loop that ties everything together
@@ -922,7 +927,7 @@ fn main() -> io::Result<()> {
 	let poll_tfd = Tfd::periodic(cfg.poll_ms)?;
 	
 	// 2. One-shot timer for turning LED off after blink duration
-	//	  Created disarmed; we arm it when activity is detected
+	//        Created disarmed; we arm it when activity is detected
 	let off_tfd = Tfd::oneshot()?;
 
 	// Tags to identify which timer fired in epoll events
@@ -959,23 +964,23 @@ fn main() -> io::Result<()> {
 	if !cfg.quiet {
 		println!(
 			"nvme-led-daemon: led={} nvme={} interval={}ms blink={}ms read_blink={:?} write_blink={:?} active_high={} mode={:?} on_fields={:?} (pid={})",
-			cfg.led_path,			// LED sysfs path
-			cfg.nvme_path,			// NVMe stat file path
-			cfg.poll_ms,			// Polling interval
-			cfg.blink_ms,			// Default blink duration
-			cfg.read_blink_ms,		// Read-specific blink duration (if set)
-			cfg.write_blink_ms,		// Write-specific blink duration (if set)
-			cfg.active_high,		// LED polarity
-			match cfg.nvme_mode {	// Which stat fields we're monitoring
+			cfg.led_path,                   // LED sysfs path
+			cfg.nvme_path,                  // NVMe stat file path
+			cfg.poll_ms,                    // Polling interval
+			cfg.blink_ms,                   // Default blink duration
+			cfg.read_blink_ms,              // Read-specific blink duration (if set)
+			cfg.write_blink_ms,             // Write-specific blink duration (if set)
+			cfg.active_high,                // LED polarity
+			match cfg.nvme_mode {   // Which stat fields we're monitoring
 				NvmeMode::Sectors => "sectors", 
 				NvmeMode::Io => "io" 
 			},
-			match cfg.on_fields {	// Which operations trigger LED
+			match cfg.on_fields {   // Which operations trigger LED
 				FieldsSel::Reads => "reads", 
 				FieldsSel::Writes => "writes", 
 				FieldsSel::Both => "both" 
 			},
-			std::process::id()		// Our PID (useful for systemd, etc.)
+			std::process::id()              // Our PID (useful for systemd, etc.)
 		);
 	}
 
@@ -1012,10 +1017,10 @@ fn main() -> io::Result<()> {
 						// Activity detected! Determine if we should blink for it
 						// based on the on_fields filter
 						let relevant = match (cfg.on_fields, dir) {
-							(FieldsSel::Both, _) => true,			   // Both: always relevant
-							(FieldsSel::Reads, Dir::Read) => true,	   // Reads only: relevant if read
+							(FieldsSel::Both, _) => true,                      // Both: always relevant
+							(FieldsSel::Reads, Dir::Read) => true,     // Reads only: relevant if read
 							(FieldsSel::Writes, Dir::Write) => true,   // Writes only: relevant if write
-							_ => false,									// Filtered out
+							_ => false,                                                                     // Filtered out
 						};
 						
 						if relevant {
@@ -1082,4 +1087,111 @@ fn main() -> io::Result<()> {
 	// - Epoll::drop() closes epoll fd
 	// - Tfd::drop() closes both timerfd fds
 	// - File in Led is automatically closed
+}
+
+
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	/// Helper: build a config-file style key/value map from pairs.
+	fn map_of(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+		pairs
+			.iter()
+			.map(|(k, v)| (k.to_string(), v.to_string()))
+			.collect()
+	}
+
+	// --- Config precedence (fix #1) -----------------------------------------
+
+	#[test]
+	fn cli_flag_overrides_config_file_value() {
+		// The config file sets interval_ms = 10 ...
+		let cfg_map = map_of(&[("interval_ms", "10")]);
+		let mut cfg = config_from_map(&cfg_map);
+		assert_eq!(cfg.poll_ms, 10, "config file value should load first");
+
+		// ... but the CLI flag --interval-ms 50 must win over the file value.
+		let args = vec!["--interval-ms".to_string(), "50".to_string()];
+		apply_cli_args(&mut cfg, &args);
+		assert_eq!(cfg.poll_ms, 50, "CLI flag must override config file");
+	}
+
+	#[test]
+	fn config_value_kept_when_no_cli_override() {
+		let cfg_map = map_of(&[("interval_ms", "25"), ("blink_ms", "30")]);
+		let mut cfg = config_from_map(&cfg_map);
+
+		// A CLI flag that does not touch the timing keeps the file values.
+		apply_cli_args(&mut cfg, &["--quiet".to_string()]);
+		assert_eq!(cfg.poll_ms, 25);
+		assert_eq!(cfg.blink_ms, 30);
+		assert!(cfg.quiet);
+	}
+
+	// --- Timing validation (fix #2) -----------------------------------------
+
+	#[test]
+	fn timing_validation_rejects_zero_interval() {
+		let mut cfg = config_from_map(&HashMap::new());
+		cfg.poll_ms = 0;
+		let err = validate_timing(&cfg).expect_err("zero interval must be rejected");
+		assert!(err.contains("interval_ms"), "unexpected message: {err}");
+	}
+
+	#[test]
+	fn timing_validation_rejects_zero_blink() {
+		let mut cfg = config_from_map(&HashMap::new());
+		cfg.blink_ms = 0;
+		let err = validate_timing(&cfg).expect_err("zero blink must be rejected");
+		assert!(err.contains("blink_ms"), "unexpected message: {err}");
+	}
+
+	#[test]
+	fn timing_validation_rejects_zero_read_and_write_blink() {
+		let mut cfg = config_from_map(&HashMap::new());
+		cfg.read_blink_ms = Some(0);
+		assert!(validate_timing(&cfg).is_err(), "zero read_blink_ms must be rejected");
+
+		let mut cfg2 = config_from_map(&HashMap::new());
+		cfg2.write_blink_ms = Some(0);
+		assert!(validate_timing(&cfg2).is_err(), "zero write_blink_ms must be rejected");
+	}
+
+	#[test]
+	fn timing_validation_accepts_valid_config() {
+		let cfg = config_from_map(&map_of(&[("interval_ms", "10"), ("blink_ms", "20")]));
+		assert!(validate_timing(&cfg).is_ok());
+	}
+
+	// --- Stat parsing (fix #3) ----------------------------------------------
+
+	// Example /sys/block/*/stat line. Fields are 0-indexed:
+	//   0:reads 1:reads_merged 2:sectors_read 3:time_reading
+	//   4:writes 5:writes_merged 6:sectors_written 7:time_writing
+	//   8:ios_in_progress 9:time_io 10:weighted_time_io
+	const SAMPLE_STAT: &str = "100 5 2048 30 200 7 4096 40 0 50 60";
+
+	#[test]
+	fn stat_parsing_sectors_mode() {
+		let (r, w) = parse_stat_fields(SAMPLE_STAT, NvmeMode::Sectors)
+			.expect("well-formed line should parse");
+		assert_eq!(r, 2048, "field 2 = sectors read");
+		assert_eq!(w, 4096, "field 6 = sectors written");
+	}
+
+	#[test]
+	fn stat_parsing_io_mode() {
+		let (r, w) = parse_stat_fields(SAMPLE_STAT, NvmeMode::Io)
+			.expect("well-formed line should parse");
+		assert_eq!(r, 100, "field 0 = reads completed");
+		assert_eq!(w, 200, "field 4 = writes completed");
+	}
+
+	#[test]
+	fn stat_parsing_rejects_short_line() {
+		// Only three fields present: sectors mode needs field 6.
+		assert!(parse_stat_fields("100 5 2048", NvmeMode::Sectors).is_none());
+	}
 }
